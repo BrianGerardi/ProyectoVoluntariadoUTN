@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+# Instalar dependencias necesarias para compilar paquetes nativos si se requiere
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /usr/src/app
+
+# Copiar archivos de dependencias
+COPY package*.json ./
+
+# Instalar dependencias
+RUN npm install
+
+# Copiar código del proyecto
+COPY . .
+
+# Exponer puerto del backend
+EXPOSE 3001
+
+# Ejecutar el comando para levantar el servidor en modo desarrollo
+CMD ["npm", "run", "server"]

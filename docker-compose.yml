@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: voluntariado-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: voluntariado_password
+      POSTGRES_DB: voluntariado_db
+    ports:
+      - "5433:5432" # Mapea 5433 local a 5432 del contenedor (coincide con el .env local)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docs/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d voluntariado_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: voluntariado-backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgres://postgres:voluntariado_password@db:5432/voluntariado_db
+      - NODE_ENV=development
+      - JWT_SECRET=supersecretvoluntariado2026
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: voluntariado-frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
