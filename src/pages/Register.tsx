@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { Box, Card, CardContent, Typography, TextField, Button, Alert, Chip, OutlinedInput, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  Box, Card, CardContent, Typography, TextField, Button, Alert, Chip,
+  OutlinedInput, Select, MenuItem, FormControl, InputLabel, Checkbox,
+  ListItemText, Autocomplete
+} from '@mui/material';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -14,17 +18,50 @@ const SKILLS_OPTIONS = [
   'Limpieza de escombros'
 ];
 
+const PROVINCIAS = [
+  'Buenos Aires',
+  'Ciudad Autónoma de Buenos Aires',
+  'Catamarca',
+  'Chaco',
+  'Chubut',
+  'Córdoba',
+  'Corrientes',
+  'Entre Ríos',
+  'Formosa',
+  'Jujuy',
+  'La Pampa',
+  'La Rioja',
+  'Mendoza',
+  'Misiones',
+  'Neuquén',
+  'Río Negro',
+  'Salta',
+  'San Juan',
+  'San Luis',
+  'Santa Cruz',
+  'Santa Fe',
+  'Santiago del Estero',
+  'Tierra del Fuego, Antártida e Islas del Atlántico Sur',
+  'Tucumán'
+];
+
 export default function Register() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     full_name: '',
     phone: '',
+    province: '',
     city: '',
     skills: [] as string[],
     role: 'volunteer'
   });
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [skillsOpen, setSkillsOpen] = useState(false);
+  const [localidades, setLocalidades] = useState<string[]>([]);
+  const [loadingLocalidades, setLoadingLocalidades] = useState(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -42,9 +79,54 @@ export default function Register() {
     });
   };
 
+  const fetchLocalidades = useCallback((provincia: string, search: string) => {
+    clearTimeout(debounceTimer.current);
+    if (!provincia || search.length < 2) {
+      setLocalidades([]);
+      return;
+    }
+    debounceTimer.current = setTimeout(async () => {
+      setLoadingLocalidades(true);
+      try {
+        const url = `http://localhost:3001/api/georef/localidades?provincia=${encodeURIComponent(provincia)}&nombre=${encodeURIComponent(search)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setLocalidades(data.localidades || []);
+      } catch (err) {
+        console.error('Error buscando localidades:', err);
+      } finally {
+        setLoadingLocalidades(false);
+      }
+    }, 300);
+  }, []);
+
+  const handleProvinceChange = (newProvince: string) => {
+    setFormData({ ...formData, province: newProvince, city: '' });
+    setLocalidades([]);
+  };
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailBlur = () => {
+    if (formData.email && !validateEmail(formData.email)) {
+      setEmailError('Ingresá un email válido (ej: usuario@dominio.com)');
+    } else {
+      setEmailError('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!validateEmail(formData.email)) {
+      setEmailError('Ingresá un email válido (ej: usuario@dominio.com)');
+      return;
+    }
+
     try {
       const res = await fetch('http://localhost:3001/api/auth/register', {
         method: 'POST',
@@ -93,6 +175,9 @@ export default function Register() {
               required
               value={formData.email}
               onChange={handleChange}
+              onBlur={handleEmailBlur}
+              error={!!emailError}
+              helperText={emailError}
             />
             <TextField
               label="Teléfono"
@@ -102,28 +187,43 @@ export default function Register() {
               value={formData.phone}
               onChange={handleChange}
             />
-            <TextField
-              label="Ciudad de Residencia"
-              name="city"
-              fullWidth
-              margin="normal"
-              required
-              value={formData.city}
-              onChange={handleChange}
+
+            {/* Provincia */}
+            <Autocomplete
+              options={PROVINCIAS}
+              value={formData.province || null}
+              onChange={(_, newValue) => handleProvinceChange(newValue || '')}
+              renderInput={(params) => (
+                <TextField {...params} label="Provincia" margin="normal" required />
+              )}
+              noOptionsText="No se encontró la provincia"
             />
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="role-label">Tipo de Usuario / Rol</InputLabel>
-              <Select
-                labelId="role-label"
-                name="role"
-                value={formData.role}
-                label="Tipo de Usuario / Rol"
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              >
-                <MenuItem value="volunteer">Voluntario</MenuItem>
-                <MenuItem value="coordinator">Coordinador de Emergencia</MenuItem>
-              </Select>
-            </FormControl>
+
+            {/* Ciudad / Localidad */}
+            <Autocomplete
+              options={localidades}
+              value={formData.city || null}
+              disabled={!formData.province}
+              loading={loadingLocalidades}
+              filterOptions={(x) => x}
+              onChange={(_, newValue) => setFormData({ ...formData, city: newValue || '' })}
+              onInputChange={(_, newInputValue, reason) => {
+                if (reason === 'input') {
+                  fetchLocalidades(formData.province, newInputValue);
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Ciudad / Localidad"
+                  margin="normal"
+                  required
+                  helperText={!formData.province ? 'Seleccioná una provincia primero' : 'Escribí al menos 2 letras para buscar'}
+                />
+              )}
+              noOptionsText={loadingLocalidades ? 'Buscando...' : 'Escribí para buscar localidades'}
+            />
+
             <TextField
               label="Contraseña"
               name="password"
@@ -140,6 +240,9 @@ export default function Register() {
               <Select
                 labelId="skills-label"
                 multiple
+                open={skillsOpen}
+                onOpen={() => setSkillsOpen(true)}
+                onClose={() => setSkillsOpen(false)}
                 value={formData.skills}
                 onChange={handleSkillsChange}
                 input={<OutlinedInput id="select-multiple-chip" label="Especialidades / Habilidades" />}
@@ -150,12 +253,28 @@ export default function Register() {
                     ))}
                   </Box>
                 )}
+                MenuProps={{
+                  slotProps: {
+                    paper: { sx: { maxHeight: 350 } }
+                  }
+                }}
               >
                 {SKILLS_OPTIONS.map((skill) => (
                   <MenuItem key={skill} value={skill}>
-                    {skill}
+                    <Checkbox checked={formData.skills.includes(skill)} />
+                    <ListItemText primary={skill} />
                   </MenuItem>
                 ))}
+                <Box sx={{ position: 'sticky', bottom: 0, bgcolor: 'background.paper', borderTop: '1px solid', borderColor: 'divider', p: 1 }}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    size="small"
+                    onClick={() => setSkillsOpen(false)}
+                  >
+                    Listo
+                  </Button>
+                </Box>
               </Select>
             </FormControl>
 

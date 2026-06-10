@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Typography,
   Grid,
@@ -74,8 +75,58 @@ export default function Dashboard() {
     [assignmentId: string]: { status: string; assigned_task: string };
   }>({});
 
+  const [emergencyAssignments, setEmergencyAssignments] = useState<{[emId: string]: any[]}>({});
+
+  const fetchAssignmentsForEmergency = async (emId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:3001/api/emergencies/${emId}/assignments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmergencyAssignments((prev) => ({ ...prev, [emId]: data }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch emergency assignments', err);
+    }
+  };
+
+  const handleUpdateStatus = async (emId: string, assignmentId: string, status: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:3001/api/assignments/${assignmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        fetchAssignmentsForEmergency(emId);
+        fetchMyAssignments();
+        if (selectedEmergencyToManage === emId) {
+          const updatedRes = await fetch(`http://localhost:3001/api/emergencies/${selectedEmergencyToManage}/assignments`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (updatedRes.ok) {
+            const data = await updatedRes.json();
+            setPostulatedVolunteers(data);
+          }
+        }
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Error al actualizar estado');
+      }
+    } catch (err) {
+      console.error('Failed to update status', err);
+    }
+  };
+
   // Request browser geolocation on mount
   useEffect(() => {
+    localStorage.setItem('lastCheckedEmergencies', new Date().toISOString());
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -106,6 +157,16 @@ export default function Dashboard() {
       fetchMyAssignments();
     }
   }, [token]);
+
+  // Load assignments for all emergencies if coordinator/admin
+  useEffect(() => {
+    const isCoord = user?.role === 'coordinator' || user?.role === 'admin';
+    if (isCoord && token && emergencies.length > 0) {
+      emergencies.forEach((em) => {
+        fetchAssignmentsForEmergency(em.id);
+      });
+    }
+  }, [emergencies, token, user]);
 
   const fetchEmergencies = async (lat?: number, lng?: number) => {
     try {
@@ -462,39 +523,115 @@ export default function Dashboard() {
                           </Paper>
                         )}
 
-                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                          {!isPostulated ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {/* Top row / postulation actions */}
+                          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                            {!isPostulated ? (
+                              <Button 
+                                variant="contained" 
+                                color="primary" 
+                                startIcon={<HandIcon />}
+                                onClick={() => handlePostulate(em.id)}
+                                sx={{ py: 1.2, px: 3, fontWeight: 700, borderRadius: 2 }}
+                              >
+                                POSTULARME AHORA
+                              </Button>
+                            ) : (
+                              <Button 
+                                disabled 
+                                variant="outlined"
+                                sx={{ py: 1.2, px: 3, borderRadius: 2, fontWeight: 700 }}
+                              >
+                                {status === 'pending' && 'POSTULACIÓN PENDIENTE'}
+                                {status === 'assigned' && 'ASIGNADO'}
+                                {status === 'completed' && 'AYUDA FINALIZADA'}
+                                {status === 'cancelled' && 'CANCELADO'}
+                              </Button>
+                            )}
+                          </Box>
+
+                          {/* Solicitudes Panel (Admin/Coordinator Only) */}
+                          {isCoordinator && (
+                            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, border: '1px solid', borderColor: 'grey.300' }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <PeopleIcon color="primary" sx={{ fontSize: 20 }} />
+                                Solicitudes de Voluntarios ({emergencyAssignments[em.id]?.length || 0})
+                              </Typography>
+                              {(!emergencyAssignments[em.id] || emergencyAssignments[em.id].length === 0) ? (
+                                <Typography variant="caption" color="text.secondary">
+                                  No hay solicitudes para esta emergencia.
+                                </Typography>
+                              ) : (
+                                <List disablePadding>
+                                  {emergencyAssignments[em.id].map((vol) => (
+                                    <ListItem key={vol.id} disablePadding sx={{ py: 1, borderBottom: '1px solid', borderColor: 'grey.200', '&:last-child': { borderBottom: 'none' } }}>
+                                      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                                        <Box>
+                                          <Typography 
+                                            component={Link} 
+                                            to={`/profile/${vol.user_id}`}
+                                            variant="subtitle2" 
+                                            sx={{ fontWeight: 'bold', textDecoration: 'none', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
+                                          >
+                                            {vol.full_name}
+                                          </Typography>
+                                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                            Estado: {vol.status === 'assigned' ? 'Aceptado' : vol.status === 'cancelled' ? 'Rechazado' : 'Pendiente'}
+                                          </Typography>
+                                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                            {vol.skills && vol.skills.length > 0 ? (
+                                              vol.skills.map((skill: string, sIdx: number) => (
+                                                <Chip key={sIdx} label={skill} size="small" variant="outlined" sx={{ fontSize: '10px', height: 16 }} />
+                                              ))
+                                            ) : (
+                                              <Chip label="Sin habilidades" size="small" variant="outlined" sx={{ fontSize: '10px', height: 16 }} />
+                                            )}
+                                          </Box>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                          {vol.status !== 'assigned' && (
+                                            <Button 
+                                              variant="contained" 
+                                              color="success" 
+                                              size="small"
+                                              onClick={() => handleUpdateStatus(em.id, vol.id, 'assigned')}
+                                              sx={{ fontSize: '11px', fontWeight: 'bold' }}
+                                            >
+                                              Aceptar
+                                            </Button>
+                                          )}
+                                          {vol.status !== 'cancelled' && (
+                                            <Button 
+                                              variant="outlined" 
+                                              color="error" 
+                                              size="small"
+                                              onClick={() => handleUpdateStatus(em.id, vol.id, 'cancelled')}
+                                              sx={{ fontSize: '11px', fontWeight: 'bold' }}
+                                            >
+                                              Rechazar
+                                            </Button>
+                                          )}
+                                        </Box>
+                                      </Box>
+                                    </ListItem>
+                                  ))}
+                                </List>
+                              )}
+                            </Paper>
+                          )}
+
+                          {/* Chat / Details button */}
+                          <Box>
                             <Button 
-                              variant="contained" 
-                              color="primary" 
-                              startIcon={<HandIcon />}
-                              onClick={() => handlePostulate(em.id)}
+                              variant="outlined" 
+                              color="secondary" 
+                              startIcon={<ChatIcon />}
+                              onClick={() => handleOpenDetails(em.id)}
                               sx={{ py: 1.2, px: 3, fontWeight: 700, borderRadius: 2 }}
                             >
-                              POSTULARME AHORA
+                              CHAT / DETALLES
                             </Button>
-                          ) : (
-                            <Button 
-                              disabled 
-                              variant="outlined"
-                              sx={{ py: 1.2, px: 3, borderRadius: 2, fontWeight: 700 }}
-                            >
-                              {status === 'pending' && 'POSTULACIÓN PENDIENTE'}
-                              {status === 'assigned' && 'ASIGNADO'}
-                              {status === 'completed' && 'AYUDA FINALIZADA'}
-                              {status === 'cancelled' && 'CANCELADO'}
-                            </Button>
-                          )}
-                          
-                          <Button 
-                            variant="outlined" 
-                            color="secondary" 
-                            startIcon={<ChatIcon />}
-                            onClick={() => handleOpenDetails(em.id)}
-                            sx={{ py: 1.2, px: 3, fontWeight: 700, borderRadius: 2 }}
-                          >
-                            CHAT / DETALLES
-                          </Button>
+                          </Box>
                         </Box>
                       </CardContent>
                     </Card>

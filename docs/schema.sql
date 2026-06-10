@@ -18,7 +18,8 @@ CREATE TABLE users (
     full_name TEXT NOT NULL,
     role user_role DEFAULT 'volunteer',
     phone TEXT,
-    city TEXT, -- Ciudad de residencia (para idea general)
+    city TEXT, -- Ciudad/Localidad de residencia
+    province TEXT, -- Provincia de residencia
     skills TEXT[], -- Array of skills (e.g., 'first_aid', 'driving')
     availability JSONB, -- Flexible schedule/availability
     metadata JSONB DEFAULT '{}', -- Additional flexible data (NoSQL style)

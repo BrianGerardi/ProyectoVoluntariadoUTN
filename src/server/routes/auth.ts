@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecretvoluntariado2026';
 
 // Register a new user
 router.post('/register', async (req, res) => {
-  const { email, password, full_name, phone, city, skills, role } = req.body;
+  const { email, password, full_name, phone, city, province, skills, role } = req.body;
 
   try {
     // Check if user exists
@@ -24,10 +24,10 @@ router.post('/register', async (req, res) => {
 
     // Insert user
     const result = await pool.query(`
-      INSERT INTO users (email, password_hash, full_name, role, phone, city, skills)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, email, full_name, role, phone, city, skills
-    `, [email, password_hash, full_name, role || 'volunteer', phone, city, skills || []]);
+      INSERT INTO users (email, password_hash, full_name, role, phone, city, province, skills)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, email, full_name, role, phone, city, province, skills
+    `, [email, password_hash, full_name, role || 'volunteer', phone, city, province, skills || []]);
 
     const user = result.rows[0];
 
@@ -75,3 +75,5 @@ router.post('/login', async (req, res) => {
 });
 
 export default router;
+
+

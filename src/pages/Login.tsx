@@ -71,7 +71,7 @@ export default function Login() {
               Iniciar Sesión
             </Button>
             <Typography align="center" variant="body2">
-              ¿No tienes cuenta? <Link to="/register" style={{ color: '#0052cb', textDecoration: 'none', fontWeight: 'bold' }}>Regístrate</Link>
+              ¿No tienes cuenta? <Link to="/register" style={{ color: '#b90014', textDecoration: 'none', fontWeight: 'bold' }}>Regístrate</Link>
             </Typography>
           </form>
         </CardContent>

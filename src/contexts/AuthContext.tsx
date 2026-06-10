@@ -7,7 +7,9 @@ interface User {
   role: string;
   phone?: string;
   city?: string;
+  province?: string;
   skills?: string[];
+  metadata?: Record<string, any>;
 }
 
 interface AuthContextType {
