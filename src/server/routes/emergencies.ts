@@ -244,4 +244,25 @@ router.post('/emergencies/:id/messages', authenticateToken, async (req: AuthRequ
   }
 });
 
+// 9. Delete an emergency (Coordinator & Admin only)
+router.delete('/emergencies/:id', authenticateToken, requireRole(['coordinator', 'admin']), async (req, res) => {
+  const emergencyId = req.params.id;
+  try {
+    const result = await pool.query(
+      'DELETE FROM emergencies WHERE id = $1 RETURNING *',
+      [emergencyId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Emergencia no encontrada' });
+      return;
+    }
+
+    res.json({ message: 'Emergencia eliminada con éxito', emergency: result.rows[0] });
+  } catch (err) {
+    console.error('Error deleting emergency:', err);
+    res.status(500).json({ error: 'Error al eliminar la emergencia de la base de datos' });
+  }
+});
+
 export default router;

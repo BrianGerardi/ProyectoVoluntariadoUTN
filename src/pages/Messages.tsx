@@ -47,12 +47,12 @@ const URGENCY_LABELS: Record<string, string> = {
 };
 
 const TYPE_EMOJI: Record<string, string> = {
-  flood: '🌊',
-  fire: '🔥',
-  earthquake: '🌍',
-  storm: '⛈️',
-  accident: '🚨',
-  other: '⚠️',
+  'Incendio': '🔥',
+  'Inundación': '🌊',
+  'Terremoto': '🌍',
+  'Salud / Accidente': '🚨',
+  'Búsqueda y Rescate': '🔍',
+  'Otro': '⚠️',
 };
 
 export default function Messages() {
@@ -67,27 +67,47 @@ export default function Messages() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
-  // Fetch user's assignments (emergency groups)
+  // Fetch user's assignments or all emergencies depending on role
   useEffect(() => {
     localStorage.setItem('lastCheckedMessages', new Date().toISOString());
-    const fetchAssignments = async () => {
+    const fetchChats = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/assignments/my', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          // Only show active assignments (pending or assigned)
-          setAssignments(data.filter((a: Assignment) => a.status !== 'cancelled'));
+        const isCoord = user?.role === 'coordinator' || user?.role === 'admin';
+        if (isCoord) {
+          const res = await fetch('http://localhost:3001/api/emergencies', {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (res.ok) {
+            const mapped = data.map((em: any) => ({
+              id: em.id,
+              emergency_id: em.id,
+              status: 'assigned',
+              emergency_title: em.title,
+              emergency_type: em.type,
+              emergency_urgency: em.urgency,
+              emergency_address: em.address || 'Ubicación en mapa',
+            }));
+            setAssignments(mapped);
+          }
+        } else {
+          const res = await fetch('http://localhost:3001/api/assignments/my', {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (res.ok) {
+            // Only show active assigned status
+            setAssignments(data.filter((a: Assignment) => a.status === 'assigned'));
+          }
         }
       } catch (err) {
-        console.error('Error fetching assignments:', err);
+        console.error('Error fetching chats:', err);
       } finally {
         setLoading(false);
       }
     };
-    if (token) fetchAssignments();
-  }, [token]);
+    if (token && user) fetchChats();
+  }, [token, user]);
 
   // Fetch messages for the selected emergency
   const fetchMessages = useCallback(async (emergencyId: string) => {
@@ -198,6 +218,7 @@ export default function Messages() {
   }
 
   if (assignments.length === 0) {
+    const isCoord = user?.role === 'coordinator' || user?.role === 'admin';
     return (
       <Paper
         elevation={0}
@@ -217,8 +238,9 @@ export default function Messages() {
           Sin mensajes
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-          No estás asignado a ninguna emergencia todavía. Cuando te postules y seas aceptado en una emergencia, 
-          se creará un grupo de chat automáticamente donde podrás coordinar con otros voluntarios.
+          {isCoord 
+            ? 'No hay emergencias activas reportadas en este momento. Cuando publiques una emergencia desde el Dashboard, se habilitará un canal de chat automáticamente para coordinar a los voluntarios.'
+            : 'No estás asignado a ninguna emergencia todavía. Cuando te postules y seas aceptado en una emergencia, se creará un grupo de chat automáticamente donde podrás coordinar con otros voluntarios.'}
         </Typography>
       </Paper>
     );

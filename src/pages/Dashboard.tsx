@@ -34,6 +34,7 @@ import {
   CheckCircle as CheckCircleIcon,
   PendingActions as PendingIcon,
   AssignmentTurnedIn as AssignmentTurnedInIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import EmergencyMap from '../components/EmergencyMap';
 import EmergencyDetailsDialog from '../components/EmergencyDetailsDialog';
@@ -375,6 +376,38 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeleteEmergency = async (emergencyId: string) => {
+    const confirmDelete = window.confirm('¿Estás seguro de que deseas eliminar esta emergencia? Esta acción no se puede deshacer y eliminará todas las postulaciones y mensajes asociados.');
+    if (!confirmDelete) return;
+
+    setManagementStatus({ success: '', error: '' });
+    try {
+      const res = await fetch(`http://localhost:3001/api/emergencies/${emergencyId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        setManagementStatus({ success: 'Emergencia eliminada exitosamente.', error: '' });
+        setSelectedEmergencyToManage('');
+        // Refresh emergencies list
+        if (userLocation) {
+          fetchEmergencies(userLocation[0], userLocation[1]);
+        } else {
+          fetchEmergencies();
+        }
+      } else {
+        const data = await res.json();
+        setManagementStatus({ success: '', error: data.error || 'Error al eliminar la emergencia.' });
+      }
+    } catch (err) {
+      console.error(err);
+      setManagementStatus({ success: '', error: 'Error de servidor al eliminar la emergencia.' });
+    }
+  };
+
   // Helper to open details dialog
   const handleOpenDetails = (emergencyId: string) => {
     const em = emergencies.find((e) => e.id === emergencyId);
@@ -620,16 +653,16 @@ export default function Dashboard() {
                             </Paper>
                           )}
 
-                          {/* Chat / Details button */}
+                          {/* Details button */}
                           <Box>
                             <Button 
                               variant="outlined" 
                               color="secondary" 
-                              startIcon={<ChatIcon />}
+                              startIcon={<InfoIcon />}
                               onClick={() => handleOpenDetails(em.id)}
                               sx={{ py: 1.2, px: 3, fontWeight: 700, borderRadius: 2 }}
                             >
-                              CHAT / DETALLES
+                              VER DETALLES
                             </Button>
                           </Box>
                         </Box>
@@ -882,24 +915,36 @@ export default function Dashboard() {
                     Gestionar Voluntarios y Tareas
                   </Typography>
 
-                  <FormControl fullWidth size="small" sx={{ mb: 3 }}>
-                    <InputLabel id="manage-em-select-label">Seleccionar Emergencia</InputLabel>
-                    <Select
-                      labelId="manage-em-select-label"
-                      value={selectedEmergencyToManage}
-                      label="Seleccionar Emergencia"
-                      onChange={(e) => setSelectedEmergencyToManage(e.target.value)}
-                    >
-                      <MenuItem value="">
-                        <em>Seleccionar alerta para coordinar...</em>
-                      </MenuItem>
-                      {emergencies.map((em) => (
-                        <MenuItem key={em.id} value={em.id}>
-                          {em.title} ({em.type} - {em.address})
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexDirection: { xs: 'column', sm: 'row' } }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="manage-em-select-label">Seleccionar Emergencia</InputLabel>
+                      <Select
+                        labelId="manage-em-select-label"
+                        value={selectedEmergencyToManage}
+                        label="Seleccionar Emergencia"
+                        onChange={(e) => setSelectedEmergencyToManage(e.target.value)}
+                      >
+                        <MenuItem value="">
+                          <em>Seleccionar alerta para coordinar...</em>
                         </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                        {emergencies.map((em) => (
+                          <MenuItem key={em.id} value={em.id}>
+                            {em.title} ({em.type} - {em.address})
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    {selectedEmergencyToManage && (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => handleDeleteEmergency(selectedEmergencyToManage)}
+                        sx={{ whiteSpace: 'nowrap', fontWeight: 'bold', height: 40, width: { xs: '100%', sm: 'auto' } }}
+                      >
+                        Eliminar Emergencia
+                      </Button>
+                    )}
+                  </Box>
 
                   {managementStatus.success && <Alert severity="success" sx={{ mb: 2 }}>{managementStatus.success}</Alert>}
                   {managementStatus.error && <Alert severity="error" sx={{ mb: 2 }}>{managementStatus.error}</Alert>}
