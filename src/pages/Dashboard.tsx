@@ -489,8 +489,18 @@ export default function Dashboard() {
                       <CardContent sx={{ p: 3, ml: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Chip 
-                              label={em.urgency.toUpperCase()} 
+                              <Chip 
+                              label={
+                                em.urgency === 'critical'
+                                  ? 'CRÍTICA'
+                                  : em.urgency === 'high'
+                                  ? 'ALTA'
+                                  : em.urgency === 'medium'
+                                  ? 'MEDIA'
+                                  : em.urgency === 'low'
+                                  ? 'BAJA'
+                                  : em.urgency.toUpperCase()
+                              } 
                               color={em.urgency === 'critical' || em.urgency === 'high' ? 'error' : 'warning'} 
                               size="small" 
                               sx={{ fontWeight: 700, borderRadius: 1 }} 
@@ -570,16 +580,44 @@ export default function Dashboard() {
                                 POSTULARME AHORA
                               </Button>
                             ) : (
-                              <Button 
-                                disabled 
-                                variant="outlined"
-                                sx={{ py: 1.2, px: 3, borderRadius: 2, fontWeight: 700 }}
-                              >
-                                {status === 'pending' && 'POSTULACIÓN PENDIENTE'}
-                                {status === 'assigned' && 'ASIGNADO'}
-                                {status === 'completed' && 'AYUDA FINALIZADA'}
-                                {status === 'cancelled' && 'CANCELADO'}
-                              </Button>
+                                <Chip
+                                  icon={
+                                    status === 'assigned' || status === 'completed'
+                                      ? <CheckCircleIcon />
+                                      : status === 'pending'
+                                      ? <PendingIcon />
+                                      : undefined
+                                  }
+                                  label={
+                                    status === 'pending'
+                                      ? 'Postulación pendiente'
+                                      : status === 'assigned'
+                                      ? 'Voluntario asignado'
+                                      : status === 'completed'
+                                      ? 'Ayuda finalizada'
+                                      : status === 'cancelled'
+                                      ? 'Postulación cancelada'
+                                      : 'Postulado'
+                                  }
+                                  color={
+                                    status === 'pending'
+                                      ? 'warning'
+                                      : status === 'assigned'
+                                      ? 'success'
+                                      : status === 'completed'
+                                      ? 'success'
+                                      : status === 'cancelled'
+                                      ? 'error'
+                                      : 'default'
+                                  }
+                                  sx={{
+                                    fontWeight: 700,
+                                    borderRadius: 2,
+                                    px: 1.5,
+                                    py: 2.2,
+                                    fontSize: '14px',
+                                  }}
+                                />
                             )}
                           </Box>
 

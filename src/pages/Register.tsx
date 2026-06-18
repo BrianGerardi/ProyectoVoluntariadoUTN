@@ -59,6 +59,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [skillsOpen, setSkillsOpen] = useState(false);
+  const [customSkill, setCustomSkill] = useState('');
   const [localidades, setLocalidades] = useState<string[]>([]);
   const [loadingLocalidades, setLoadingLocalidades] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -78,6 +79,25 @@ export default function Register() {
       skills: typeof value === 'string' ? value.split(',') : value,
     });
   };
+
+  const handleAddCustomSkill = () => {
+  const skill = customSkill.trim();
+
+  if (!skill) return;
+
+  const alreadyExists = formData.skills.some(
+    (s) => s.toLowerCase() === skill.toLowerCase()
+  );
+
+  if (!alreadyExists) {
+    setFormData({
+      ...formData,
+      skills: [...formData.skills, skill],
+    });
+  }
+
+  setCustomSkill('');
+};
 
   const fetchLocalidades = useCallback((provincia: string, search: string) => {
     clearTimeout(debounceTimer.current);
@@ -277,7 +297,29 @@ export default function Register() {
                 </Box>
               </Select>
             </FormControl>
-
+                 <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <TextField
+                label="Otra especialidad"
+                placeholder="Ej: Cocina comunitaria, albañilería, electricidad"
+                fullWidth
+                size="small"
+                value={customSkill}
+                onChange={(e) => setCustomSkill(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomSkill();
+                  }
+                }}
+              />
+              <Button
+                variant="outlined"
+                onClick={handleAddCustomSkill}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                Agregar
+              </Button>
+            </Box>
             <Button
               type="submit"
               variant="contained"

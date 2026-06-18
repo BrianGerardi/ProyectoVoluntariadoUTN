@@ -3,6 +3,8 @@ import {
   Box, Typography, Paper, List, ListItemButton, ListItemText,
   ListItemAvatar, Avatar, TextField, IconButton, Chip,
   CircularProgress,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -10,6 +12,7 @@ import {
   ArrowBack as ArrowBackIcon,
   Chat as ChatIcon,
   Group as GroupIcon,
+  PushPin as PushPinIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -29,6 +32,9 @@ interface Message {
   sender_id: string;
   sender_name: string;
   content: string;
+  metadata?: {
+    important?: boolean;
+  };
   created_at: string;
 }
 
@@ -57,6 +63,7 @@ const TYPE_EMOJI: Record<string, string> = {
 
 export default function Messages() {
   const { token, user } = useAuth();
+  const canHighlightMessage = user?.role === 'admin' || user?.role === 'coordinator';
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedEmergency, setSelectedEmergency] = useState<Assignment | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -64,6 +71,7 @@ export default function Messages() {
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
+  const [isImportantMessage, setIsImportantMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
@@ -160,12 +168,16 @@ export default function Messages() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ content: newMessage.trim() }),
+        body: JSON.stringify({
+         content: newMessage.trim(),
+          is_important: canHighlightMessage && isImportantMessage,
+      }),
       });
       if (res.ok) {
         const msg = await res.json();
         setMessages((prev) => [...prev, msg]);
         setNewMessage('');
+        setIsImportantMessage(false);
       }
     } catch (err) {
       console.error('Error sending message:', err);
@@ -195,7 +207,9 @@ export default function Messages() {
     if (d.toDateString() === yesterday.toDateString()) return 'Ayer';
     return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
   };
-
+  const pinnedImportantMessage = [...messages]
+  .reverse()
+  .find((msg) => msg.metadata?.important);
   // Group messages by date
   const groupedMessages: { date: string; messages: Message[] }[] = [];
   messages.forEach((msg) => {
@@ -371,7 +385,29 @@ export default function Messages() {
                 sx={{ bgcolor: URGENCY_COLORS[selectedEmergency.emergency_urgency], color: '#fff', fontWeight: 600, fontSize: '0.72rem' }}
               />
             </Box>
-
+            {pinnedImportantMessage && (
+            <Box
+              sx={{
+                p: 1.5,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'rgba(255, 193, 7, 0.15)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 1,
+              }}
+            >
+              <PushPinIcon sx={{ color: 'warning.main', mt: 0.2 }} />
+              <Box>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: 'warning.dark' }}>
+                  MENSAJE IMPORTANTE
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {pinnedImportantMessage.content}
+                </Typography>
+              </Box>
+            </Box>
+          )}
             {/* Messages */}
             <Box sx={{ flex: 1, overflow: 'auto', p: 2, bgcolor: 'grey.50' }}>
               {loadingMessages ? (
@@ -445,6 +481,19 @@ export default function Messages() {
 
             {/* Input */}
             <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 1, alignItems: 'flex-end', bgcolor: 'background.paper' }}>
+              {canHighlightMessage && (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={isImportantMessage}
+                        onChange={(e) => setIsImportantMessage(e.target.checked)}
+                        size="small"
+                      />
+                    }
+                    label="Mensaje importante"
+                    sx={{ mr: 1, whiteSpace: 'nowrap' }}
+                  />
+                )}
               <TextField
                 fullWidth
                 multiline

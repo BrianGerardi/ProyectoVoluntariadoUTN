@@ -116,6 +116,7 @@ export default function Profile() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [skillsOpen, setSkillsOpen] = useState(false);
+  const [customSkill, setCustomSkill] = useState('');
   const [localidades, setLocalidades] = useState<string[]>([]);
   const [loadingLocalidades, setLoadingLocalidades] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -189,6 +190,36 @@ export default function Profile() {
       skills: typeof value === 'string' ? value.split(',') : value,
     });
   };
+
+  const handleAddCustomSkill = () => {
+  const skill = customSkill.trim();
+
+  if (!skill) return;
+
+  const alreadyExists = editData.skills.some(
+    (s) => s.toLowerCase() === skill.toLowerCase()
+  );
+
+  if (!alreadyExists) {
+    setEditData({
+      ...editData,
+      skills: [...editData.skills, skill],
+    });
+  }
+
+  setCustomSkill('');
+};
+
+const handleRemoveSkill = (skillToRemove: string) => {
+  setEditData({
+    ...editData,
+    skills: editData.skills.filter((skill) => skill !== skillToRemove),
+  });
+};
+
+const allSkillsOptions = Array.from(
+  new Set([...SKILLS_OPTIONS, ...editData.skills])
+).filter((skill) => skill.trim() !== '');
 
   const fetchLocalidades = useCallback((provincia: string, search: string) => {
     clearTimeout(debounceTimer.current);
@@ -761,7 +792,7 @@ export default function Profile() {
                   }
                 }}
               >
-                {SKILLS_OPTIONS.map((skill) => (
+                {allSkillsOptions.map((skill) => (
                   <MenuItem key={skill} value={skill}>
                     <Checkbox checked={editData.skills.includes(skill)} />
                     <ListItemText primary={skill} />
@@ -779,6 +810,44 @@ export default function Profile() {
                 </Box>
               </Select>
             </FormControl>
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <TextField
+                label="Otra especialidad"
+                placeholder="Ej: Cocina comunitaria, albañilería, electricidad"
+                fullWidth
+                size="small"
+                value={customSkill}
+                onChange={(e) => setCustomSkill(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomSkill();
+                  }
+                }}
+              />
+              <Button
+                variant="outlined"
+                onClick={handleAddCustomSkill}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                Agregar
+              </Button>
+            </Box>
+
+            {editData.skills.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                {editData.skills.map((skill) => (
+                  <Chip
+                    key={skill}
+                    label={skill}
+                    color="primary"
+                    size="small"
+                    onDelete={() => handleRemoveSkill(skill)}
+                  />
+                ))}
+              </Box>
+            )}
 
             <Divider sx={{ my: 2 }} />
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: 'text.secondary' }}>

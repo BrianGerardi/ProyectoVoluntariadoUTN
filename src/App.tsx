@@ -82,12 +82,26 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }, [fetchNotifications, location.pathname]);
 
   const handleOpenNotifications = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+  setAnchorEl(event.currentTarget);
+  fetchNotifications();
+};
 
-  const handleCloseNotifications = () => {
-    setAnchorEl(null);
-  };
+const handleCloseNotifications = () => {
+  setAnchorEl(null);
+
+  if (notifications.totalCount > 0) {
+    const now = new Date().toISOString();
+
+    localStorage.setItem('lastCheckedEmergencies', now);
+    localStorage.setItem('lastCheckedMessages', now);
+
+    setNotifications({
+      nearbyEmergencies: [],
+      newMessages: [],
+      totalCount: 0,
+    });
+  }
+};
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -194,8 +208,12 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <IconButton color="inherit" onClick={handleOpenNotifications}>
-              <Badge badgeContent={notifications.totalCount} color="error">
-                <NotificationsIcon color="action" />
+                  <Badge
+                  color="error"
+                  variant="dot"
+                 invisible={notifications.totalCount === 0}
+                >
+             <NotificationsIcon color="action" />
               </Badge>
             </IconButton>
             <IconButton color="error" onClick={logout} title="Cerrar Sesión" aria-label="logout">

@@ -199,7 +199,7 @@ router.get('/emergencies/:id/messages', authenticateToken, async (req, res) => {
   const emergencyId = req.params.id;
   try {
     const result = await pool.query(`
-      SELECT m.id, m.emergency_id, m.sender_id, m.content, m.created_at, u.full_name as sender_name
+      SELECT m.id, m.emergency_id, m.sender_id, m.content, m.metadata, m.created_at, u.full_name as sender_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.emergency_id = $1
@@ -216,7 +216,7 @@ router.get('/emergencies/:id/messages', authenticateToken, async (req, res) => {
 router.post('/emergencies/:id/messages', authenticateToken, async (req: AuthRequest, res) => {
   const emergencyId = req.params.id;
   const senderId = req.user?.id;
-  const { content } = req.body;
+  const { content, is_important } = req.body;
 
   if (!content || content.trim() === '') {
     res.status(400).json({ error: 'El contenido del mensaje no puede estar vacío' });
@@ -224,11 +224,17 @@ router.post('/emergencies/:id/messages', authenticateToken, async (req: AuthRequ
   }
 
   try {
-    const messageResult = await pool.query(`
-      INSERT INTO messages (emergency_id, sender_id, content)
-      VALUES ($1, $2, $3)
-      RETURNING *
-    `, [emergencyId, senderId, content]);
+    const isImportantAllowed = req.user?.role === 'admin' || req.user?.role === 'coordinator';
+
+const metadata = {
+  important: isImportantAllowed && is_important === true,
+};
+
+const messageResult = await pool.query(`
+  INSERT INTO messages (emergency_id, sender_id, content, metadata)
+  VALUES ($1, $2, $3, $4)
+  RETURNING *
+`, [emergencyId, senderId, content, metadata]);
 
     const userResult = await pool.query('SELECT full_name FROM users WHERE id = $1', [senderId]);
     
