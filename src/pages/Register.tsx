@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../config';
 
 const SKILLS_OPTIONS = [
   'Primeros Auxilios',
@@ -108,7 +109,7 @@ export default function Register() {
     debounceTimer.current = setTimeout(async () => {
       setLoadingLocalidades(true);
       try {
-        const url = `http://localhost:3001/api/georef/localidades?provincia=${encodeURIComponent(provincia)}&nombre=${encodeURIComponent(search)}`;
+        const url = `${API_BASE_URL}/api/georef/localidades?provincia=${encodeURIComponent(provincia)}&nombre=${encodeURIComponent(search)}`;
         const res = await fetch(url);
         const data = await res.json();
         setLocalidades(data.localidades || []);
@@ -148,7 +149,7 @@ export default function Register() {
     }
 
     try {
-      const res = await fetch('http://localhost:3001/api/auth/register', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

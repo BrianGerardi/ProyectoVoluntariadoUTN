@@ -7,8 +7,9 @@ const { Pool } = pg;
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // For local development without SSL, you might need to disable it
-  // ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1') || process.env.DB_NO_SSL === 'true'
+    ? false
+    : { rejectUnauthorized: false }
 });
 
 pool.on('error', (err) => {

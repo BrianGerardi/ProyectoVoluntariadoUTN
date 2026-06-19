@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 
 import { useAuth } from './contexts/AuthContext';
+import { API_BASE_URL } from './config';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -63,7 +64,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       const lastCheckedEmergencies = localStorage.getItem('lastCheckedEmergencies') || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const lastCheckedMessages = localStorage.getItem('lastCheckedMessages') || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-      const res = await fetch(`http://localhost:3001/api/users/notifications?lastCheckedEmergencies=${lastCheckedEmergencies}&lastCheckedMessages=${lastCheckedMessages}`, {
+      const res = await fetch(`${API_BASE_URL}/api/users/notifications?lastCheckedEmergencies=${lastCheckedEmergencies}&lastCheckedMessages=${lastCheckedMessages}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

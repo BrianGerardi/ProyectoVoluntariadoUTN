@@ -15,6 +15,7 @@ import {
   PushPin as PushPinIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../config';
 
 interface Assignment {
   id: string;
@@ -83,7 +84,7 @@ export default function Messages() {
       try {
         const isCoord = user?.role === 'coordinator' || user?.role === 'admin';
         if (isCoord) {
-          const res = await fetch('http://localhost:3001/api/emergencies', {
+          const res = await fetch(`${API_BASE_URL}/api/emergencies`, {
             headers: { 'Authorization': `Bearer ${token}` },
           });
           const data = await res.json();
@@ -100,7 +101,7 @@ export default function Messages() {
             setAssignments(mapped);
           }
         } else {
-          const res = await fetch('http://localhost:3001/api/assignments/my', {
+          const res = await fetch(`${API_BASE_URL}/api/assignments/my`, {
             headers: { 'Authorization': `Bearer ${token}` },
           });
           const data = await res.json();
@@ -121,7 +122,7 @@ export default function Messages() {
   // Fetch messages for the selected emergency
   const fetchMessages = useCallback(async (emergencyId: string) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/emergencies/${emergencyId}/messages`, {
+      const res = await fetch(`${API_BASE_URL}/api/emergencies/${emergencyId}/messages`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const data = await res.json();
@@ -163,7 +164,7 @@ export default function Messages() {
     if (!canSendMessages || !newMessage.trim() || !selectedEmergency || sending) return;
     setSending(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/emergencies/${selectedEmergency.emergency_id}/messages`, {
+      const res = await fetch(`${API_BASE_URL}/api/emergencies/${selectedEmergency.emergency_id}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

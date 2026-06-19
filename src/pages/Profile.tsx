@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useParams } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const SKILLS_OPTIONS = [
   'Primeros Auxilios',
@@ -135,8 +136,8 @@ export default function Profile() {
     const fetchProfile = async () => {
       try {
         const url = userId 
-          ? `http://localhost:3001/api/users/${userId}`
-          : 'http://localhost:3001/api/users/profile';
+          ? `${API_BASE_URL}/api/users/${userId}`
+          : `${API_BASE_URL}/api/users/profile`;
         const res = await fetch(url, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -230,7 +231,7 @@ const allSkillsOptions = Array.from(
     debounceTimer.current = setTimeout(async () => {
       setLoadingLocalidades(true);
       try {
-        const url = `http://localhost:3001/api/georef/localidades?provincia=${encodeURIComponent(provincia)}&nombre=${encodeURIComponent(search)}`;
+        const url = `${API_BASE_URL}/api/georef/localidades?provincia=${encodeURIComponent(provincia)}&nombre=${encodeURIComponent(search)}`;
         const res = await fetch(url);
         const data = await res.json();
         setLocalidades(data.localidades || []);
@@ -371,7 +372,7 @@ const allSkillsOptions = Array.from(
         banner: newProfileData.banner,
       };
 
-      const res = await fetch('http://localhost:3001/api/users/profile', {
+      const res = await fetch(`${API_BASE_URL}/api/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -418,7 +419,7 @@ const allSkillsOptions = Array.from(
         banner: editData.banner,
       };
 
-      const res = await fetch('http://localhost:3001/api/users/profile', {
+      const res = await fetch(`${API_BASE_URL}/api/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

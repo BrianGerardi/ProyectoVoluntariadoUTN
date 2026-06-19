@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import {
   Dialog,
   DialogTitle,
@@ -136,7 +137,7 @@ export default function EmergencyDetailsDialog({
         .map((item) => item.trim())
         .filter((item) => item !== '');
 
-      const res = await fetch(`http://localhost:3001/api/emergencies/${emergency.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/emergencies/${emergency.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -28,5 +28,7 @@ dist-ssr
 
 # Local Cache and Docker directories
 .npm-cache
+dist-server
+
 
 

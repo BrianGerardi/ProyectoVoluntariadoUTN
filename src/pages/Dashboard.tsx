@@ -28,7 +28,6 @@ import {
   Group as GroupIcon,
   Warning as WarningIcon,
   Handyman as HandIcon,
-  Chat as ChatIcon,
   AddLocationAlt as AddLocationIcon,
   People as PeopleIcon,
   CheckCircle as CheckCircleIcon,
@@ -39,6 +38,7 @@ import {
 import EmergencyMap from '../components/EmergencyMap';
 import EmergencyDetailsDialog from '../components/EmergencyDetailsDialog';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../config';
 
 export default function Dashboard() {
   const { user, token } = useAuth();
@@ -81,7 +81,7 @@ export default function Dashboard() {
   const fetchAssignmentsForEmergency = async (emId: string) => {
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/emergencies/${emId}/assignments`, {
+      const res = await fetch(`${API_BASE_URL}/api/emergencies/${emId}/assignments`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -96,7 +96,7 @@ export default function Dashboard() {
   const handleUpdateStatus = async (emId: string, assignmentId: string, status: string) => {
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/assignments/${assignmentId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ export default function Dashboard() {
         fetchAssignmentsForEmergency(emId);
         fetchMyAssignments();
         if (selectedEmergencyToManage === emId) {
-          const updatedRes = await fetch(`http://localhost:3001/api/emergencies/${selectedEmergencyToManage}/assignments`, {
+          const updatedRes = await fetch(`${API_BASE_URL}/api/emergencies/${selectedEmergencyToManage}/assignments`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (updatedRes.ok) {
@@ -171,7 +171,7 @@ export default function Dashboard() {
 
   const fetchEmergencies = async (lat?: number, lng?: number) => {
     try {
-      let url = 'http://localhost:3001/api/emergencies';
+      let url = `${API_BASE_URL}/api/emergencies`;
       if (lat !== undefined && lng !== undefined) {
         url += `?lat=${lat}&lng=${lng}`;
       }
@@ -185,7 +185,7 @@ export default function Dashboard() {
 
   const fetchMyAssignments = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/assignments/my', {
+      const res = await fetch(`${API_BASE_URL}/api/assignments/my`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -200,7 +200,7 @@ export default function Dashboard() {
   const handlePostulate = async (emergencyId: string) => {
     if (!token) return;
     try {
-      const res = await fetch('http://localhost:3001/api/assignments', {
+      const res = await fetch(`${API_BASE_URL}/api/assignments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +247,7 @@ export default function Dashboard() {
         ? creationForm.required_resources.split(',').map((r) => r.trim()).filter((r) => r !== '')
         : [];
 
-      const res = await fetch('http://localhost:3001/api/emergencies', {
+      const res = await fetch(`${API_BASE_URL}/api/emergencies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -302,7 +302,7 @@ export default function Dashboard() {
         return;
       }
       try {
-        const res = await fetch(`http://localhost:3001/api/emergencies/${selectedEmergencyToManage}/assignments`, {
+        const res = await fetch(`${API_BASE_URL}/api/emergencies/${selectedEmergencyToManage}/assignments`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -343,7 +343,7 @@ export default function Dashboard() {
     if (!editData) return;
 
     try {
-      const res = await fetch(`http://localhost:3001/api/assignments/${assignmentId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -358,7 +358,7 @@ export default function Dashboard() {
       if (res.ok) {
         setManagementStatus({ success: 'Asignación de voluntario actualizada exitosamente.', error: '' });
         // Refresh volunteer lists
-        const updatedRes = await fetch(`http://localhost:3001/api/emergencies/${selectedEmergencyToManage}/assignments`, {
+        const updatedRes = await fetch(`${API_BASE_URL}/api/emergencies/${selectedEmergencyToManage}/assignments`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (updatedRes.ok) {
@@ -382,7 +382,7 @@ export default function Dashboard() {
 
     setManagementStatus({ success: '', error: '' });
     try {
-      const res = await fetch(`http://localhost:3001/api/emergencies/${emergencyId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/emergencies/${emergencyId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
