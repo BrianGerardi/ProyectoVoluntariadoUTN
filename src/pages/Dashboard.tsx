@@ -408,6 +408,18 @@ export default function Dashboard() {
     }
   };
 
+  const handleEmergencyUpdated = (updatedEmergency: any) => {
+  setEmergencies((prev) =>
+    prev.map((em) =>
+      em.id === updatedEmergency.id ? { ...em, ...updatedEmergency } : em
+    )
+  );
+
+  setSelectedEmergency((prev: any) =>
+    prev ? { ...prev, ...updatedEmergency } : updatedEmergency
+  );
+};
+
   // Helper to open details dialog
   const handleOpenDetails = (emergencyId: string) => {
     const em = emergencies.find((e) => e.id === emergencyId);
@@ -549,27 +561,73 @@ export default function Dashboard() {
                           )}
                         </Grid>
 
-                        {/* Postulation feedback */}
-                        {isPostulated && (
-                          <Paper sx={{ p: 2, mb: 3, border: '1px solid', borderColor: status === 'assigned' ? 'success.light' : 'warning.light', bgcolor: status === 'assigned' ? 'rgba(46, 125, 50, 0.05)' : 'rgba(237, 108, 2, 0.05)' }} elevation={0}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                              {status === 'assigned' ? <CheckCircleIcon color="success" /> : <PendingIcon color="warning" />}
-                              <Typography variant="subtitle2" color={status === 'assigned' ? 'success.main' : 'warning.main'} sx={{ fontWeight: 'bold' }}>
-                                {status === 'assigned' ? 'ASIGNADO' : 'POSTULACIÓN EN REVISIÓN'}
-                              </Typography>
-                            </Box>
-                            {status === 'assigned' && assignedTask && (
-                              <Typography variant="body2" sx={{ fontWeight: '500' }}>
-                                <strong>Tarea Asignada:</strong> {assignedTask}
-                              </Typography>
-                            )}
-                          </Paper>
-                        )}
+                          {/* Postulation feedback */}
+                          {isPostulated && (
+                            <Paper
+                              sx={{
+                                p: 2,
+                                mb: 3,
+                                border: '1px solid',
+                                borderColor:
+                                  status === 'assigned'
+                                    ? 'success.light'
+                                    : status === 'completed'
+                                    ? 'success.light'
+                                    : status === 'cancelled'
+                                    ? 'error.light'
+                                    : 'warning.light',
+                                bgcolor:
+                                  status === 'assigned'
+                                    ? 'rgba(46, 125, 50, 0.05)'
+                                    : status === 'completed'
+                                    ? 'rgba(46, 125, 50, 0.05)'
+                                    : status === 'cancelled'
+                                    ? 'rgba(211, 47, 47, 0.05)'
+                                    : 'rgba(237, 108, 2, 0.05)',
+                              }}
+                              elevation={0}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: status === 'assigned' && assignedTask ? 0.5 : 0 }}>
+                                {status === 'assigned' || status === 'completed' ? (
+                                  <CheckCircleIcon color="success" />
+                                ) : status === 'cancelled' ? (
+                                  <WarningIcon color="error" />
+                                ) : (
+                                  <PendingIcon color="warning" />
+                                )}
+
+                                <Typography
+                                  variant="subtitle2"
+                                  color={
+                                    status === 'assigned'
+                                      ? 'success.main'
+                                      : status === 'completed'
+                                      ? 'success.main'
+                                      : status === 'cancelled'
+                                      ? 'error.main'
+                                      : 'warning.main'
+                                  }
+                                  sx={{ fontWeight: 'bold' }}
+                                >
+                                  {status === 'assigned' && 'ASIGNADO'}
+                                  {status === 'completed' && 'AYUDA FINALIZADA'}
+                                  {status === 'cancelled' && 'POSTULACIÓN CANCELADA'}
+                                  {status === 'pending' && 'POSTULACIÓN EN REVISIÓN'}
+                                </Typography>
+                              </Box>
+
+                              {status === 'assigned' && assignedTask && (
+                                <Typography variant="body2" sx={{ fontWeight: 500, mt: 1 }}>
+                                  <strong>Tarea asignada:</strong> {assignedTask}
+                                </Typography>
+                              )}
+                            </Paper>
+                          )}
 
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           {/* Top row / postulation actions */}
                           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
-                            {!isPostulated ? (
+                            {!isPostulated && (
                               <Button 
                                 variant="contained" 
                                 color="primary" 
@@ -579,45 +637,6 @@ export default function Dashboard() {
                               >
                                 POSTULARME AHORA
                               </Button>
-                            ) : (
-                                <Chip
-                                  icon={
-                                    status === 'assigned' || status === 'completed'
-                                      ? <CheckCircleIcon />
-                                      : status === 'pending'
-                                      ? <PendingIcon />
-                                      : undefined
-                                  }
-                                  label={
-                                    status === 'pending'
-                                      ? 'Postulación pendiente'
-                                      : status === 'assigned'
-                                      ? 'Voluntario asignado'
-                                      : status === 'completed'
-                                      ? 'Ayuda finalizada'
-                                      : status === 'cancelled'
-                                      ? 'Postulación cancelada'
-                                      : 'Postulado'
-                                  }
-                                  color={
-                                    status === 'pending'
-                                      ? 'warning'
-                                      : status === 'assigned'
-                                      ? 'success'
-                                      : status === 'completed'
-                                      ? 'success'
-                                      : status === 'cancelled'
-                                      ? 'error'
-                                      : 'default'
-                                  }
-                                  sx={{
-                                    fontWeight: 700,
-                                    borderRadius: 2,
-                                    px: 1.5,
-                                    py: 2.2,
-                                    fontSize: '14px',
-                                  }}
-                                />
                             )}
                           </Box>
 
@@ -1097,6 +1116,8 @@ export default function Dashboard() {
           emergency={selectedEmergency}
           token={token}
           currentUserId={user?.id}
+           currentUserRole={user?.role}
+           onEmergencyUpdated={handleEmergencyUpdated}
         />
       )}
     </>

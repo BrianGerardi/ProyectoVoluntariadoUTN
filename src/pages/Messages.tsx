@@ -63,6 +63,7 @@ const TYPE_EMOJI: Record<string, string> = {
 
 export default function Messages() {
   const { token, user } = useAuth();
+  const canSendMessages = user?.role === 'admin' || user?.role === 'coordinator';
   const canHighlightMessage = user?.role === 'admin' || user?.role === 'coordinator';
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedEmergency, setSelectedEmergency] = useState<Assignment | null>(null);
@@ -159,7 +160,7 @@ export default function Messages() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !selectedEmergency || sending) return;
+    if (!canSendMessages || !newMessage.trim() || !selectedEmergency || sending) return;
     setSending(true);
     try {
       const res = await fetch(`http://localhost:3001/api/emergencies/${selectedEmergency.emergency_id}/messages`, {
@@ -479,9 +480,11 @@ export default function Messages() {
               <div ref={messagesEndRef} />
             </Box>
 
-            {/* Input */}
-            <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 1, alignItems: 'flex-end', bgcolor: 'background.paper' }}>
-              {canHighlightMessage && (
+          {/* Input */}
+          <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+            {canSendMessages ? (
+              <>
+                {canHighlightMessage && (
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -490,43 +493,52 @@ export default function Messages() {
                         size="small"
                       />
                     }
-                    label="Mensaje importante"
-                    sx={{ mr: 1, whiteSpace: 'nowrap' }}
+                    label="Fijar mensaje importante"
+                    sx={{ mb: 1 }}
                   />
                 )}
-              <TextField
-                fullWidth
-                multiline
-                maxRows={4}
-                placeholder="Escribí un mensaje..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                variant="outlined"
-                size="small"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 3,
-                    bgcolor: 'grey.50',
-                  },
-                }}
-              />
-              <IconButton
-                color="primary"
-                onClick={handleSend}
-                disabled={!newMessage.trim() || sending}
-                sx={{
-                  bgcolor: 'primary.main',
-                  color: '#fff',
-                  width: 40,
-                  height: 40,
-                  '&:hover': { bgcolor: 'primary.dark' },
-                  '&.Mui-disabled': { bgcolor: 'grey.200', color: 'grey.400' },
-                }}
-              >
-                {sending ? <CircularProgress size={18} color="inherit" /> : <SendIcon sx={{ fontSize: 20 }} />}
-              </IconButton>
-            </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    maxRows={4}
+                    placeholder="Escribí un mensaje..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        bgcolor: 'grey.50',
+                      },
+                    }}
+                  />
+                  <IconButton
+                    color="primary"
+                    onClick={handleSend}
+                    disabled={!newMessage.trim() || sending}
+                    sx={{
+                      bgcolor: 'primary.main',
+                      color: '#fff',
+                      width: 40,
+                      height: 40,
+                      '&:hover': { bgcolor: 'primary.dark' },
+                      '&.Mui-disabled': { bgcolor: 'grey.200', color: 'grey.400' },
+                    }}
+                  >
+                    {sending ? <CircularProgress size={18} color="inherit" /> : <SendIcon sx={{ fontSize: 20 }} />}
+                  </IconButton>
+                </Box>
+              </>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 1 }}>
+                Solo los administradores y coordinadores pueden enviar mensajes en este grupo.
+              </Typography>
+            )}
+          </Box>
           </>
         )}
       </Paper>

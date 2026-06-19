@@ -213,7 +213,7 @@ router.get('/emergencies/:id/messages', authenticateToken, async (req, res) => {
 });
 
 // 8. Send a new message to an emergency chat
-router.post('/emergencies/:id/messages', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/emergencies/:id/messages', authenticateToken, requireRole(['coordinator', 'admin']), async (req: AuthRequest, res) => {
   const emergencyId = req.params.id;
   const senderId = req.user?.id;
   const { content, is_important } = req.body;
@@ -250,7 +250,49 @@ const messageResult = await pool.query(`
   }
 });
 
-// 9. Delete an emergency (Coordinator & Admin only)
+// 9. Update an emergency (Coordinator & Admin only)
+router.put('/emergencies/:id', authenticateToken, requireRole(['coordinator', 'admin']), async (req: AuthRequest, res) => {
+  const emergencyId = req.params.id;
+  const { title, description, type, required_resources } = req.body;
+
+  if (!title || !description || !type) {
+    res.status(400).json({ error: 'Faltan datos obligatorios para actualizar la emergencia' });
+    return;
+  }
+
+  try {
+    const resourcesArray = Array.isArray(required_resources) ? required_resources : [];
+
+    const result = await pool.query(`
+      UPDATE emergencies 
+      SET title = $1, description = $2, type = $3, required_resources = $4
+      WHERE id = $5
+      RETURNING 
+        id, title, description, type, status, urgency, address,
+        ST_X(location::geometry) as longitude,
+        ST_Y(location::geometry) as latitude,
+        required_resources, created_at
+    `, [
+      title,
+      description,
+      type,
+      JSON.stringify(resourcesArray),
+      emergencyId,
+    ]);
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Emergencia no encontrada' });
+      return;
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating emergency:', err);
+    res.status(500).json({ error: 'Error al actualizar la emergencia' });
+  }
+});
+
+// 10. Delete an emergency (Coordinator & Admin only)
 router.delete('/emergencies/:id', authenticateToken, requireRole(['coordinator', 'admin']), async (req, res) => {
   const emergencyId = req.params.id;
   try {
