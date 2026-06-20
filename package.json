@@ -7,7 +7,7 @@
     "dev": "vite",
     "server": "ts-node-dev --project src/server/tsconfig.json --respawn --transpile-only src/server/index.ts",
     "build": "tsc -b && vite build",
-    "build:server": "tsc -p src/server/tsconfig.json --outDir dist-server",
+    "build:server": "tsc -p src/server/tsconfig.json --outDir dist-server && echo '{\"type\": \"commonjs\"}' > dist-server/package.json",
     "start": "node dist-server/index.js",
     "lint": "eslint .",
     "preview": "vite preview"
