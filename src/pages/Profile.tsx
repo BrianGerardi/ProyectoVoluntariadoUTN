@@ -1,3 +1,9 @@
+/**
+ * @file Profile.tsx
+ * @description Página de perfil de usuario. Permite visualizar y editar
+ * datos personales, foto de perfil, banner, habilidades y ubicación.
+ * Soporta vista propia y vista de otros usuarios (vía URL param).
+ */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box, Typography, TextField, Button, Alert, Chip, Avatar,
@@ -19,52 +25,12 @@ import {
   ZoomOut as ZoomOutIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { userService } from '../services/api';
 import { API_BASE_URL } from '../config';
+import { SKILLS_OPTIONS, PROVINCIAS, ROLE_LABELS } from '../constants';
+import type { User } from '../types';
 
-const SKILLS_OPTIONS = [
-  'Primeros Auxilios',
-  'Conducción (Auto/Camioneta)',
-  'Conducción (Camión)',
-  'Búsqueda y Rescate',
-  'Logística y Distribución',
-  'Apoyo Psicológico',
-  'Enfermería/Medicina',
-  'Limpieza de escombros'
-];
-
-const PROVINCIAS = [
-  'Buenos Aires',
-  'Ciudad Autónoma de Buenos Aires',
-  'Catamarca',
-  'Chaco',
-  'Chubut',
-  'Córdoba',
-  'Corrientes',
-  'Entre Ríos',
-  'Formosa',
-  'Jujuy',
-  'La Pampa',
-  'La Rioja',
-  'Mendoza',
-  'Misiones',
-  'Neuquén',
-  'Río Negro',
-  'Salta',
-  'San Juan',
-  'San Luis',
-  'Santa Cruz',
-  'Santa Fe',
-  'Santiago del Estero',
-  'Tierra del Fuego, Antártida e Islas del Atlántico Sur',
-  'Tucumán'
-];
-
-const ROLE_LABELS: Record<string, string> = {
-  volunteer: 'Voluntario',
-  coordinator: 'Coordinador de Emergencia',
-  admin: 'Administrador',
-};
 
 interface ProfileData {
   full_name: string;
@@ -78,42 +44,24 @@ interface ProfileData {
   description: string;
   profile_photo: string;
   banner: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata: Record<string, any>;
 }
 
 export default function Profile() {
   const { token, user, login } = useAuth();
   const { userId } = useParams<{ userId?: string }>();
+
+  // ── Hooks (deben ir siempre antes de cualquier return) ────
   const isOwnProfile = !userId || userId === user?.id;
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [profileData, setProfileData] = useState<ProfileData>({
-    full_name: '',
-    email: '',
-    phone: '',
-    province: '',
-    city: '',
-    skills: [],
-    role: 'volunteer',
-    bio: '',
-    description: '',
-    profile_photo: '',
-    banner: '',
-    metadata: {},
-  });
-  const [editData, setEditData] = useState<ProfileData>({
-    full_name: '',
-    email: '',
-    phone: '',
-    province: '',
-    city: '',
-    skills: [],
-    role: 'volunteer',
-    bio: '',
-    description: '',
-    profile_photo: '',
-    banner: '',
-    metadata: {},
-  });
+  const emptyProfile: ProfileData = {
+    full_name: '', email: '', phone: '', province: '', city: '',
+    skills: [], role: 'volunteer', bio: '', description: '',
+    profile_photo: '', banner: '', metadata: {},
+  };
+  const [profileData, setProfileData] = useState<ProfileData>(emptyProfile);
+  const [editData, setEditData] = useState<ProfileData>(emptyProfile);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [skillsOpen, setSkillsOpen] = useState(false);
@@ -135,33 +83,27 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const url = userId 
-          ? `${API_BASE_URL}/api/users/${userId}`
-          : `${API_BASE_URL}/api/users/profile`;
-        const res = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (res.ok) {
-          const meta = data.metadata || {};
-          const loadedProfile = {
-            full_name: data.full_name || '',
-            email: data.email || '',
-            phone: data.phone || '',
-            province: data.province || '',
-            city: data.city || '',
-            skills: data.skills || [],
-            role: data.role || 'volunteer',
-            bio: meta.bio || '',
-            description: meta.description || '',
-            profile_photo: meta.profile_photo || '',
-            banner: meta.banner || '',
-            metadata: meta,
-          };
-          setProfileData(loadedProfile);
-          if (data.city) {
-            setLocalidades([data.city]);
-          }
+        const data = userId
+          ? await userService.getProfileById(userId)
+          : await userService.getProfile();
+        const meta = data.metadata || {};
+        const loadedProfile = {
+          full_name: data.full_name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          province: data.province || '',
+          city: data.city || '',
+          skills: data.skills || [],
+          role: data.role || 'volunteer',
+          bio: meta.bio || '',
+          description: meta.description || '',
+          profile_photo: meta.profile_photo || '',
+          banner: meta.banner || '',
+          metadata: meta,
+        };
+        setProfileData(loadedProfile);
+        if (data.city) {
+          setLocalidades([data.city]);
         }
       } catch (err) {
         console.error('Failed to load profile', err);
@@ -184,6 +126,7 @@ export default function Profile() {
     setEditData({ ...editData, [e.target.name]: e.target.value });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEditSkillsChange = (event: any) => {
     const { target: { value } } = event;
     setEditData({
@@ -193,34 +136,34 @@ export default function Profile() {
   };
 
   const handleAddCustomSkill = () => {
-  const skill = customSkill.trim();
+    const skill = customSkill.trim();
 
-  if (!skill) return;
+    if (!skill) return;
 
-  const alreadyExists = editData.skills.some(
-    (s) => s.toLowerCase() === skill.toLowerCase()
-  );
+    const alreadyExists = editData.skills.some(
+      (s) => s.toLowerCase() === skill.toLowerCase()
+    );
 
-  if (!alreadyExists) {
+    if (!alreadyExists) {
+      setEditData({
+        ...editData,
+        skills: [...editData.skills, skill],
+      });
+    }
+
+    setCustomSkill('');
+  };
+
+  const handleRemoveSkill = (skillToRemove: string) => {
     setEditData({
       ...editData,
-      skills: [...editData.skills, skill],
+      skills: editData.skills.filter((skill) => skill !== skillToRemove),
     });
-  }
+  };
 
-  setCustomSkill('');
-};
-
-const handleRemoveSkill = (skillToRemove: string) => {
-  setEditData({
-    ...editData,
-    skills: editData.skills.filter((skill) => skill !== skillToRemove),
-  });
-};
-
-const allSkillsOptions = Array.from(
-  new Set([...SKILLS_OPTIONS, ...editData.skills])
-).filter((skill) => skill.trim() !== '');
+  const allSkillsOptions = Array.from(
+    new Set([...SKILLS_OPTIONS, ...editData.skills])
+  ).filter((skill) => skill.trim() !== '');
 
   const fetchLocalidades = useCallback((provincia: string, search: string) => {
     clearTimeout(debounceTimer.current);
@@ -371,32 +314,24 @@ const allSkillsOptions = Array.from(
         profile_photo: newProfileData.profile_photo,
         banner: newProfileData.banner,
       };
-
-      const res = await fetch(`${API_BASE_URL}/api/users/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          full_name: newProfileData.full_name,
-          phone: newProfileData.phone,
-          province: newProfileData.province,
-          city: newProfileData.city,
-          skills: newProfileData.skills,
-          role: newProfileData.role,
-          metadata: updatedMetadata,
-        }),
+      const data = await userService.updateProfile({
+        full_name: newProfileData.full_name,
+        phone: newProfileData.phone,
+        province: newProfileData.province,
+        city: newProfileData.city,
+        skills: newProfileData.skills,
+        role: newProfileData.role,
+        metadata: updatedMetadata,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Error al guardar imagen');
-
       setProfileData(newProfileData);
       setSuccess(previewField === 'profile_photo' ? 'Foto de perfil actualizada' : 'Banner actualizado');
       if (user) {
-        login(data.token || token!, data.user || data);
+        const nextUser = ('user' in data ? data.user : data) as User;
+        const nextToken = ('token' in data ? data.token : token!);
+        login(nextToken, nextUser);
       }
       setPreviewImage(null);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -419,37 +354,54 @@ const allSkillsOptions = Array.from(
         banner: editData.banner,
       };
 
-      const res = await fetch(`${API_BASE_URL}/api/users/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          full_name: editData.full_name,
-          phone: editData.phone,
-          province: editData.province,
-          city: editData.city,
-          skills: editData.skills,
-          role: editData.role,
-          metadata: updatedMetadata,
-        }),
+      const data = await userService.updateProfile({
+        full_name: editData.full_name,
+        phone: editData.phone,
+        province: editData.province,
+        city: editData.city,
+        skills: editData.skills,
+        role: editData.role,
+        metadata: updatedMetadata,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Update failed');
 
       setSuccess('Perfil actualizado exitosamente');
       setProfileData({ ...editData });
       if (user) {
-        login(data.token || token!, data.user || data);
+        const nextUser = ('user' in data ? data.user : data) as User;
+        const nextToken = ('token' in data ? data.token : token!);
+        login(nextToken, nextUser);
       }
       setIsEditOpen(false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message);
     } finally {
       setSaving(false);
     }
   };
+
+  if (!token || !user) {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 3, border: '1px solid', borderColor: 'divider',
+          p: { xs: 4, md: 6 }, textAlign: 'center', maxWidth: 520, mx: 'auto', mt: 6,
+        }}
+      >
+        <PersonIcon sx={{ fontSize: 64, color: 'grey.300', mb: 2 }} />
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
+          Mi Perfil
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7, mb: 3 }}>
+          Iniciá sesión para poder ver y editar tu perfil.
+        </Typography>
+        <Button variant="contained" component={Link} to="/login" sx={{ fontWeight: 'bold', borderRadius: 2 }}>
+          Iniciar Sesión
+        </Button>
+      </Paper>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto', pb: 4 }}>
@@ -666,14 +618,14 @@ const allSkillsOptions = Array.from(
         <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
           <BadgeIcon sx={{ fontSize: 22, color: 'primary.main' }} /> Sobre mí
         </Typography>
-        
-        <Typography 
-          variant="body1" 
-          sx={{ 
+
+        <Typography
+          variant="body1"
+          sx={{
             color: profileData.description ? 'text.primary' : 'text.disabled',
             fontStyle: profileData.description ? 'normal' : 'italic',
-            whiteSpace: 'pre-wrap', 
-            lineHeight: 1.7 
+            whiteSpace: 'pre-wrap',
+            lineHeight: 1.7
           }}
         >
           {profileData.description || "Sin descripción aún. Hacé clic en 'Editar perfil' para agregar información sobre vos."}

@@ -25,6 +25,7 @@ export default function Login() {
       
       login(data.token, data.user);
       navigate('/');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message);
     }

@@ -71,6 +71,7 @@ export default function Register() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSkillsChange = (event: any) => {
     const {
       target: { value },
@@ -159,6 +160,7 @@ export default function Register() {
       
       login(data.token, data.user);
       navigate('/');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message);
     }

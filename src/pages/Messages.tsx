@@ -5,6 +5,7 @@ import {
   CircularProgress,
   Checkbox,
   FormControlLabel,
+  Button,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -14,56 +15,15 @@ import {
   Group as GroupIcon,
   PushPin as PushPinIcon,
 } from '@mui/icons-material';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL } from '../config';
-
-interface Assignment {
-  id: string;
-  emergency_id: string;
-  status: string;
-  emergency_title: string;
-  emergency_type: string;
-  emergency_urgency: string;
-  emergency_address: string;
-}
-
-interface Message {
-  id: string;
-  emergency_id: string;
-  sender_id: string;
-  sender_name: string;
-  content: string;
-  metadata?: {
-    important?: boolean;
-  };
-  created_at: string;
-}
-
-const URGENCY_COLORS: Record<string, string> = {
-  low: '#4caf50',
-  medium: '#ff9800',
-  high: '#f44336',
-  critical: '#9c27b0',
-};
-
-const URGENCY_LABELS: Record<string, string> = {
-  low: 'Baja',
-  medium: 'Media',
-  high: 'Alta',
-  critical: 'Crítica',
-};
-
-const TYPE_EMOJI: Record<string, string> = {
-  'Incendio': '🔥',
-  'Inundación': '🌊',
-  'Terremoto': '🌍',
-  'Salud / Accidente': '🚨',
-  'Búsqueda y Rescate': '🔍',
-  'Otro': '⚠️',
-};
+import type { Emergency, Assignment, Message } from '../types';
+import { emergencyService, assignmentService, messageService } from '../services/api';
+import { URGENCY_COLORS, URGENCY_LABELS, TYPE_EMOJI } from '../constants';
 
 export default function Messages() {
   const { token, user } = useAuth();
+
   const canSendMessages = user?.role === 'admin' || user?.role === 'coordinator';
   const canHighlightMessage = user?.role === 'admin' || user?.role === 'coordinator';
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -84,31 +44,24 @@ export default function Messages() {
       try {
         const isCoord = user?.role === 'coordinator' || user?.role === 'admin';
         if (isCoord) {
-          const res = await fetch(`${API_BASE_URL}/api/emergencies`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          const data = await res.json();
-          if (res.ok) {
-            const mapped = data.map((em: any) => ({
-              id: em.id,
-              emergency_id: em.id,
-              status: 'assigned',
-              emergency_title: em.title,
-              emergency_type: em.type,
-              emergency_urgency: em.urgency,
-              emergency_address: em.address || 'Ubicación en mapa',
-            }));
-            setAssignments(mapped);
-          }
+          const data = await emergencyService.getAll();
+          const mapped = data.map((em: Emergency) => ({
+            id: em.id,
+            emergency_id: em.id,
+            user_id: user?.id || '',
+            status: 'assigned',
+            assigned_task: '',
+            assigned_at: new Date().toISOString(),
+            emergency_title: em.title,
+            emergency_type: em.type,
+            emergency_urgency: em.urgency,
+            emergency_address: em.address || 'Ubicación en mapa',
+          } as Assignment));
+          setAssignments(mapped);
         } else {
-          const res = await fetch(`${API_BASE_URL}/api/assignments/my`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-          });
-          const data = await res.json();
-          if (res.ok) {
-            // Only show active assigned status
-            setAssignments(data.filter((a: Assignment) => a.status === 'assigned'));
-          }
+          const data = await assignmentService.getMy();
+          // Only show active assigned status
+          setAssignments(data.filter((a: Assignment) => a.status === 'assigned'));
         }
       } catch (err) {
         console.error('Error fetching chats:', err);
@@ -122,26 +75,21 @@ export default function Messages() {
   // Fetch messages for the selected emergency
   const fetchMessages = useCallback(async (emergencyId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/emergencies/${emergencyId}/messages`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setMessages(data);
-      }
+      const data = await messageService.getMessages(emergencyId);
+      setMessages(data);
     } catch (err) {
       console.error('Error fetching messages:', err);
     }
-  }, [token]);
+  }, []);
 
   // When an emergency is selected, load messages and start polling
   useEffect(() => {
     if (!selectedEmergency) {
-      setMessages([]);
       if (pollRef.current) clearInterval(pollRef.current);
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingMessages(true);
     fetchMessages(selectedEmergency.emergency_id).finally(() => setLoadingMessages(false));
 
@@ -164,25 +112,16 @@ export default function Messages() {
     if (!canSendMessages || !newMessage.trim() || !selectedEmergency || sending) return;
     setSending(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/emergencies/${selectedEmergency.emergency_id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-         content: newMessage.trim(),
-          is_important: canHighlightMessage && isImportantMessage,
-      }),
-      });
-      if (res.ok) {
-        const msg = await res.json();
-        setMessages((prev) => [...prev, msg]);
-        setNewMessage('');
-        setIsImportantMessage(false);
-      }
+      const msg = await messageService.sendMessage(
+        selectedEmergency.emergency_id,
+        newMessage.trim(),
+        canHighlightMessage && isImportantMessage
+      );
+      setMessages((prev) => [...prev, msg]);
+      setNewMessage('');
+      setIsImportantMessage(false);
     } catch (err) {
-      console.error('Error sending message:', err);
+      console.error('Failed to send message:', err);
     } finally {
       setSending(false);
     }
@@ -225,6 +164,29 @@ export default function Messages() {
   });
 
   // ─── No assignments: empty state ───
+  if (!token || !user) {
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 3, border: '1px solid', borderColor: 'divider',
+          p: { xs: 4, md: 6 }, textAlign: 'center', maxWidth: 520, mx: 'auto', mt: 6,
+        }}
+      >
+        <ChatIcon sx={{ fontSize: 64, color: 'grey.300', mb: 2 }} />
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
+          Mensajes de Coordinación
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7, mb: 3 }}>
+          Acá se muestran los mensajes de las emergencias. Iniciá sesión para anotarte como voluntario y ver los chats de coordinación.
+        </Typography>
+        <Button variant="contained" component={Link} to="/login" sx={{ fontWeight: 'bold', borderRadius: 2 }}>
+          Iniciar Sesión
+        </Button>
+      </Paper>
+    );
+  }
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -305,8 +267,8 @@ export default function Messages() {
               }}
             >
               <ListItemAvatar>
-                <Avatar sx={{ bgcolor: URGENCY_COLORS[a.emergency_urgency] || '#666', width: 42, height: 42, fontSize: 20 }}>
-                  {TYPE_EMOJI[a.emergency_type] || '⚠️'}
+                <Avatar sx={{ bgcolor: (a.emergency_urgency && URGENCY_COLORS[a.emergency_urgency]) || '#666', width: 42, height: 42, fontSize: 20 }}>
+                  {(a.emergency_type && TYPE_EMOJI[a.emergency_type]) || '⚠️'}
                 </Avatar>
               </ListItemAvatar>
               <ListItemText
@@ -318,12 +280,12 @@ export default function Messages() {
                 }}
               />
               <Chip
-                label={URGENCY_LABELS[a.emergency_urgency] || a.emergency_urgency}
+                label={(a.emergency_urgency && URGENCY_LABELS[a.emergency_urgency]) || a.emergency_urgency || ''}
                 size="small"
                 sx={{
                   fontWeight: 600,
                   fontSize: '0.7rem',
-                  bgcolor: URGENCY_COLORS[a.emergency_urgency] || '#666',
+                  bgcolor: (a.emergency_urgency && URGENCY_COLORS[a.emergency_urgency]) || '#666',
                   color: '#fff',
                   height: 22,
                 }}
@@ -369,8 +331,8 @@ export default function Messages() {
               >
                 <ArrowBackIcon />
               </IconButton>
-              <Avatar sx={{ bgcolor: URGENCY_COLORS[selectedEmergency.emergency_urgency], width: 38, height: 38, fontSize: 18 }}>
-                {TYPE_EMOJI[selectedEmergency.emergency_type] || '⚠️'}
+              <Avatar sx={{ bgcolor: (selectedEmergency.emergency_urgency && URGENCY_COLORS[selectedEmergency.emergency_urgency]) || '#666', width: 38, height: 38, fontSize: 18 }}>
+                {(selectedEmergency.emergency_type && TYPE_EMOJI[selectedEmergency.emergency_type]) || '⚠️'}
               </Avatar>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -382,9 +344,9 @@ export default function Messages() {
               </Box>
               <Chip
                 icon={<WarningIcon sx={{ fontSize: 14, color: '#fff !important' }} />}
-                label={URGENCY_LABELS[selectedEmergency.emergency_urgency]}
+                label={(selectedEmergency.emergency_urgency && URGENCY_LABELS[selectedEmergency.emergency_urgency]) || selectedEmergency.emergency_urgency || ''}
                 size="small"
-                sx={{ bgcolor: URGENCY_COLORS[selectedEmergency.emergency_urgency], color: '#fff', fontWeight: 600, fontSize: '0.72rem' }}
+                sx={{ bgcolor: (selectedEmergency.emergency_urgency && URGENCY_COLORS[selectedEmergency.emergency_urgency]) || '#666', color: '#fff', fontWeight: 600, fontSize: '0.72rem' }}
               />
             </Box>
             {pinnedImportantMessage && (

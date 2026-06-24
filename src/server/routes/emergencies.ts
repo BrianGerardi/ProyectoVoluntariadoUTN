@@ -226,15 +226,15 @@ router.post('/emergencies/:id/messages', authenticateToken, requireRole(['coordi
   try {
     const isImportantAllowed = req.user?.role === 'admin' || req.user?.role === 'coordinator';
 
-const metadata = {
-  important: isImportantAllowed && is_important === true,
-};
+    const metadata = {
+      important: isImportantAllowed && is_important === true,
+    };
 
-const messageResult = await pool.query(`
-  INSERT INTO messages (emergency_id, sender_id, content, metadata)
-  VALUES ($1, $2, $3, $4)
-  RETURNING *
-`, [emergencyId, senderId, content, metadata]);
+    const messageResult = await pool.query(`
+      INSERT INTO messages (emergency_id, sender_id, content, metadata)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [emergencyId, senderId, content, metadata]);
 
     const userResult = await pool.query('SELECT full_name FROM users WHERE id = $1', [senderId]);
     

@@ -3,9 +3,9 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../db';
 import { authenticateToken } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
+import { JWT_SECRET } from '../config';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretvoluntariado2026';
 
 // Get current user profile
 router.get('/profile', authenticateToken, async (req: AuthRequest, res) => {

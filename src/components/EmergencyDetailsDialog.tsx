@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { API_BASE_URL } from '../config';
 import {
   Dialog,
   DialogTitle,
@@ -26,6 +25,8 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
+import { getUrgencyLabel, TYPE_OPTIONS } from '../constants';
+import { emergencyService } from '../services/api';
 
 interface EmergencyDetailsDialogProps {
   open: boolean;
@@ -37,22 +38,7 @@ interface EmergencyDetailsDialogProps {
   onEmergencyUpdated?: (updatedEmergency: any) => void;
 }
 
-const TYPE_OPTIONS = [
-  'Incendio',
-  'Inundación',
-  'Terremoto',
-  'Salud / Accidente',
-  'Búsqueda y Rescate',
-  'Otro',
-];
 
-const getUrgencyLabel = (urgency: string) => {
-  if (urgency === 'critical') return 'CRÍTICA';
-  if (urgency === 'high') return 'ALTA';
-  if (urgency === 'medium') return 'MEDIA';
-  if (urgency === 'low') return 'BAJA';
-  return urgency?.toUpperCase() || '';
-};
 
 const parseResources = (requiredResources: any): string[] => {
   try {
@@ -74,7 +60,6 @@ export default function EmergencyDetailsDialog({
   open,
   onClose,
   emergency,
-  token,
   currentUserRole,
   onEmergencyUpdated,
 }: EmergencyDetailsDialogProps) {
@@ -137,25 +122,12 @@ export default function EmergencyDetailsDialog({
         .map((item) => item.trim())
         .filter((item) => item !== '');
 
-      const res = await fetch(`${API_BASE_URL}/api/emergencies/${emergency.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: editForm.title.trim(),
-          description: editForm.description.trim(),
-          type: editForm.type,
-          required_resources: resourcesArray,
-        }),
+      const data = await emergencyService.update(emergency.id, {
+        title: editForm.title.trim(),
+        description: editForm.description.trim(),
+        type: editForm.type,
+        required_resources: resourcesArray,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'No se pudo actualizar la emergencia.');
-      }
 
       onEmergencyUpdated?.(data);
       setSaveSuccess('Emergencia actualizada correctamente.');

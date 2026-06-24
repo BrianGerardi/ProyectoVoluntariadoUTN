@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   AppBar,
   Box,
@@ -17,6 +17,8 @@ import {
   useMediaQuery,
   useTheme,
   Menu,
+  Avatar,
+  Button,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -25,6 +27,7 @@ import {
   Person as PersonIcon,
   Menu as MenuIcon,
   ExitToApp as LogoutIcon,
+  Login as LoginIcon,
 } from '@mui/icons-material';
 
 import { useAuth } from './contexts/AuthContext';
@@ -37,16 +40,16 @@ import Profile from './pages/Profile';
 
 const drawerWidth = 240;
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
-}
-
 function MainLayout({ children }: { children: React.ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { logout, token } = useAuth();
+  const [drawerOpen, setDrawerOpen] = useState(!isMobile);
+
+  useEffect(() => {
+    setDrawerOpen(!isMobile);
+  }, [isMobile]);
+
+  const { logout, token, user } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -105,7 +108,7 @@ const handleCloseNotifications = () => {
 };
 
   const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+    setDrawerOpen(!drawerOpen);
   };
 
   const navItems = [
@@ -130,7 +133,7 @@ const handleCloseNotifications = () => {
             <ListItemButton
               component={Link}
               to={item.path}
-              onClick={() => isMobile && setMobileOpen(false)}
+              onClick={() => isMobile && setDrawerOpen(false)}
               sx={{
                 borderRadius: 2,
                 bgcolor: currentPath === item.path ? 'primary.50' : 'transparent',
@@ -150,12 +153,21 @@ const handleCloseNotifications = () => {
         ))}
       </List>
       <Box>
-        <ListItem disablePadding>
-          <ListItemButton onClick={logout} sx={{ borderRadius: 2, color: 'error.main' }}>
-            <ListItemIcon sx={{ color: 'error.main' }}><LogoutIcon /></ListItemIcon>
-            <ListItemText primary="Cerrar Sesión" />
-          </ListItemButton>
-        </ListItem>
+        {token && user ? (
+          <ListItem disablePadding>
+            <ListItemButton onClick={logout} sx={{ borderRadius: 2, color: 'error.main' }}>
+              <ListItemIcon sx={{ color: 'error.main' }}><LogoutIcon /></ListItemIcon>
+              <ListItemText primary="Cerrar Sesión" />
+            </ListItemButton>
+          </ListItem>
+        ) : (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/login" sx={{ borderRadius: 2, color: 'primary.main' }}>
+              <ListItemIcon sx={{ color: 'primary.main' }}><LoginIcon /></ListItemIcon>
+              <ListItemText primary="Iniciar Sesión" />
+            </ListItemButton>
+          </ListItem>
+        )}
       </Box>
     </Box>
   );
@@ -176,50 +188,50 @@ const handleCloseNotifications = () => {
       >
         <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, md: 4 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {isMobile && (
-              <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 1 }}>
-                <MenuIcon />
-              </IconButton>
-            )}
+            <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 1 }}>
+              <MenuIcon />
+            </IconButton>
             <Typography variant="h6" component="div" sx={{ color: 'primary.main', fontWeight: 700 }}>
               Voluntariado Emergencias
             </Typography>
           </Box>
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 4 }}>
-            {navItems.map((item) => (
-              <Typography
-                key={item.path}
-                component={Link}
-                to={item.path}
-                variant="body2"
-                sx={{
-                  fontWeight: currentPath === item.path ? 700 : 500,
-                  color: currentPath === item.path ? 'primary.main' : 'text.secondary',
-                  borderBottom: currentPath === item.path ? '2px solid' : '2px solid transparent',
-                  borderColor: currentPath === item.path ? 'primary.main' : 'transparent',
-                  pb: 0.5,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {item.label === 'Dashboard' ? 'Emergencias' : item.label}
-              </Typography>
-            ))}
-          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton color="inherit" onClick={handleOpenNotifications}>
+            {token && user ? (
+              <>
+                <IconButton color="inherit" onClick={handleOpenNotifications}>
                   <Badge
-                  color="error"
-                  variant="dot"
-                 invisible={notifications.totalCount === 0}
+                    color="error"
+                    variant="dot"
+                    invisible={notifications.totalCount === 0}
+                  >
+                    <NotificationsIcon color="action" />
+                  </Badge>
+                </IconButton>
+                <Avatar 
+                  src={user?.metadata?.profile_photo} 
+                  alt={user?.full_name}
+                  sx={{ width: 32, height: 32, cursor: 'pointer', mx: 1, border: '2px solid', borderColor: 'primary.main' }}
+                  component={Link}
+                  to="/profile"
                 >
-             <NotificationsIcon color="action" />
-              </Badge>
-            </IconButton>
-            <IconButton color="error" onClick={logout} title="Cerrar Sesión" aria-label="logout">
-              <LogoutIcon />
-            </IconButton>
+                  {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                </Avatar>
+                <IconButton color="error" onClick={logout} title="Cerrar Sesión" aria-label="logout">
+                  <LogoutIcon />
+                </IconButton>
+              </>
+            ) : (
+              <Button
+                component={Link}
+                to="/login"
+                variant="contained"
+                color="primary"
+                startIcon={<LoginIcon />}
+                sx={{ fontWeight: 'bold', borderRadius: 2 }}
+              >
+                Iniciar Sesión
+              </Button>
+            )}
 
             <Menu
               anchorEl={anchorEl}
@@ -302,26 +314,57 @@ const handleCloseNotifications = () => {
         </Toolbar>
       </AppBar>
 
-      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}>
+      <Box component="nav">
         <Drawer
           variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
+          open={isMobile && drawerOpen}
+          onClose={() => setDrawerOpen(false)}
           ModalProps={{ keepMounted: true }}
           sx={{ display: { xs: 'block', md: 'none' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth } }}
         >
           {drawer}
         </Drawer>
         <Drawer
-          variant="permanent"
-          sx={{ display: { xs: 'none', md: 'block' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: '1px solid', borderColor: 'divider', bgcolor: 'rgba(241, 245, 249, 0.5)', mt: 8 } }}
-          open
+          variant="persistent"
+          anchor="left"
+          open={!isMobile && drawerOpen}
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
+              width: drawerWidth,
+              borderRight: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'rgba(241, 245, 249, 0.5)',
+              mt: 8,
+              height: 'calc(100vh - 64px)'
+            }
+          }}
         >
           {drawer}
         </Drawer>
       </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 4 }, width: { md: `calc(100% - ${drawerWidth}px)` }, mt: 8 }}>
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1, 
+          p: { xs: 2, md: 4 }, 
+          mt: 8,
+          transition: (theme) => theme.transitions.create(['margin', 'width'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+          }),
+          marginLeft: {
+            xs: 0,
+            md: drawerOpen ? `${drawerWidth}px` : 0
+          },
+          width: {
+            xs: '100%',
+            md: drawerOpen ? `calc(100% - ${drawerWidth}px)` : '100%'
+          }
+        }}
+      >
         <Container maxWidth="lg" disableGutters>
           {children}
         </Container>
@@ -338,41 +381,33 @@ function App() {
       <Route 
         path="/" 
         element={
-          <PrivateRoute>
-            <MainLayout>
-              <Dashboard />
-            </MainLayout>
-          </PrivateRoute>
+          <MainLayout>
+            <Dashboard />
+          </MainLayout>
         } 
       />
       <Route 
         path="/messages" 
         element={
-          <PrivateRoute>
-            <MainLayout>
-              <Messages />
-            </MainLayout>
-          </PrivateRoute>
+          <MainLayout>
+            <Messages />
+          </MainLayout>
         } 
       />
       <Route 
         path="/profile" 
         element={
-          <PrivateRoute>
-            <MainLayout>
-              <Profile />
-            </MainLayout>
-          </PrivateRoute>
+          <MainLayout>
+            <Profile />
+          </MainLayout>
         } 
       />
       <Route 
         path="/profile/:userId" 
         element={
-          <PrivateRoute>
-            <MainLayout>
-              <Profile />
-            </MainLayout>
-          </PrivateRoute>
+          <MainLayout>
+            <Profile />
+          </MainLayout>
         } 
       />
     </Routes>
