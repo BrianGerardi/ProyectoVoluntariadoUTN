@@ -24,7 +24,6 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
@@ -502,15 +501,17 @@ export default function Register() {
               required
               value={formData.full_name}
               onChange={handleChange}
-              InputProps={{
+              slotProps={{
+              input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <PersonOutlineOutlinedIcon
-  sx={{ color: 'text.secondary' }}
-/>
+                      sx={{ color: 'text.secondary' }}
+                    />
                   </InputAdornment>
                 ),
-              }}
+              },
+            }}
               sx={fieldStyle}
             />
 
@@ -525,7 +526,8 @@ export default function Register() {
               onBlur={handleEmailBlur}
               error={!!emailError}
               helperText={emailError}
-              InputProps={{
+             slotProps={{
+              input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <EmailOutlinedIcon
@@ -533,7 +535,8 @@ export default function Register() {
                     />
                   </InputAdornment>
                 ),
-              }}
+              },
+            }}
               sx={fieldStyle}
             />
 
@@ -543,7 +546,8 @@ export default function Register() {
               fullWidth
               value={formData.phone}
               onChange={handleChange}
-              InputProps={{
+              slotProps={{
+              input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <PhoneOutlinedIcon
@@ -551,7 +555,8 @@ export default function Register() {
                     />
                   </InputAdornment>
                 ),
-              }}
+              },
+            }}
               sx={fieldStyle}
             />
 
@@ -563,7 +568,8 @@ export default function Register() {
               required
               value={formData.password}
               onChange={handleChange}
-              InputProps={{
+              slotProps={{
+              input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <LockOutlinedIcon
@@ -571,7 +577,8 @@ export default function Register() {
                     />
                   </InputAdornment>
                 ),
-              }}
+              },
+            }}
               sx={fieldStyle}
             />
           </Box>

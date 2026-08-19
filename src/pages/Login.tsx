@@ -265,39 +265,37 @@ export default function Login() {
 
               <form onSubmit={handleSubmit}>
                 <TextField
-                  label="Email"
-                  type="email"
-                  fullWidth
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="nombre@correo.com"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <EmailOutlinedIcon
-                          sx={{
-                            color: 'text.secondary',
-                          }}
-                        />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    mb: 2.5,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      bgcolor: '#fafbfc',
-                      transition: '0.2s',
-                      '&:hover': {
-                        bgcolor: '#ffffff',
-                      },
-                      '&.Mui-focused': {
-                        bgcolor: '#ffffff',
-                      },
-                    },
-                  }}
-                />
+  label="Email"
+  type="email"
+  fullWidth
+  required
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  placeholder="nombre@correo.com"
+  slotProps={{
+    input: {
+      startAdornment: (
+        <InputAdornment position="start">
+          <EmailOutlinedIcon sx={{ color: 'text.secondary' }} />
+        </InputAdornment>
+      ),
+    },
+  }}
+  sx={{
+    mb: 2.5,
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 2,
+      bgcolor: '#fafbfc',
+      transition: '0.2s',
+      '&:hover': {
+        bgcolor: '#ffffff',
+      },
+      '&.Mui-focused': {
+        bgcolor: '#ffffff',
+      },
+    },
+  }}
+/>
 
                 <TextField
                   label="Contraseña"
@@ -307,17 +305,15 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Ingresa tu contraseña"
-                  InputProps={{
+                  slotProps={{
+                  input: {
                     startAdornment: (
                       <InputAdornment position="start">
-                        <LockOutlinedIcon
-                          sx={{
-                            color: 'text.secondary',
-                          }}
-                        />
+                        <LockOutlinedIcon sx={{ color: 'text.secondary' }} />
                       </InputAdornment>
                     ),
-                  }}
+                  },
+                }}
                   sx={{
                     mb: 3,
                     '& .MuiOutlinedInput-root': {

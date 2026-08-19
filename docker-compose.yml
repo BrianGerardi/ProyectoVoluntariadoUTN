@@ -26,6 +26,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: voluntariado-backend
     restart: always
+    
     ports:
       - "3001:3001"
     environment:
