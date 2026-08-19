@@ -25,6 +25,7 @@ import {
   Dashboard as DashboardIcon,
   Chat as ChatIcon,
   Person as PersonIcon,
+  InfoOutlined as InfoIcon,
   Menu as MenuIcon,
   ExitToApp as LogoutIcon,
   Login as LoginIcon,
@@ -37,6 +38,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Messages from './pages/Messages';
 import Profile from './pages/Profile';
+import ImportantInformation from './pages/ImportantInformation';
 
 const drawerWidth = 240;
 
@@ -112,10 +114,15 @@ const handleCloseNotifications = () => {
   };
 
   const navItems = [
-    { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
-    { label: 'Mensajes', path: '/messages', icon: <ChatIcon /> },
-    { label: 'Mi Perfil', path: '/profile', icon: <PersonIcon /> },
-  ];
+  { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
+  { label: 'Mensajes', path: '/messages', icon: <ChatIcon /> },
+  { label: 'Mi Perfil', path: '/profile', icon: <PersonIcon /> },
+  {
+    label: 'Información y Prevención',
+    path: '/informacion',
+    icon: <InfoIcon />,
+  },
+];
 
   const drawer = (
     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -401,6 +408,14 @@ function App() {
             <Profile />
           </MainLayout>
         } 
+      />
+            <Route
+        path="/informacion"
+        element={
+          <MainLayout>
+            <ImportantInformation />
+          </MainLayout>
+        }
       />
       <Route 
         path="/profile/:userId" 

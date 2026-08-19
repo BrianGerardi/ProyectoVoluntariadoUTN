@@ -33,6 +33,7 @@ services:
       - DATABASE_URL=postgres://postgres:voluntariado_password@db:5432/voluntariado_db
       - NODE_ENV=development
       - JWT_SECRET=supersecretvoluntariado2026
+      - DB_NO_SSL=true
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
